@@ -1,11 +1,12 @@
-project(backward-package-test)
-cmake_minimum_required(VERSION 2.8)
+project(test_package)
+cmake_minimum_required(VERSION 3.11)
+
+set(CMAKE_VERBOSE_MAKEFILE TRUE)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-include(${CONAN_CMAKE-UTILS_ROOT}/conan.cmake)
 conan_basic_setup()
 
-add_conan_library(efsw)
-
-add_executable(example main.cpp)
-target_link_libraries(example PRIVATE efsw-conan)
+add_executable(${PROJECT_NAME} main.cpp)
+target_include_directories(${PROJECT_NAME} PRIVATE ${CONAN_INCLUDE_DIRS})
+target_link_directories(${PROJECT_NAME} PRIVATE ${CONAN_LIB_DIRS})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${CONAN_LIBS})

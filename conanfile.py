@@ -1,13 +1,12 @@
-from conans import ConanFile, CMake
-from conans.tools import download, untargz
+from conans import ConanFile, CMake, tools
 import os, glob
 
 class Efsw(ConanFile):
     settings = 'os', 'compiler', 'build_type', 'arch'
     name = 'efsw'
-    url = 'https://github.com/Manu343726/efsw'
+    url = 'https://github.com/firefalcom/conan-efsw'
     license = 'MIT'
-    version = '1.0.0'
+    version = '2e73f8e96779a2895c6242d66cadb3a15aa5e192'
     options = {
         'shared': [True, False],
         'fPIC': [True, False],
@@ -18,37 +17,24 @@ class Efsw(ConanFile):
     )
     generators = 'cmake'
 
-    @property
+    source_folder = 'source_folder'
+
     def sourcedir(self):
         return os.path.join(os.getcwd(), self.name)
 
     def source(self):
-        downloaded_tar = '{}.tar.gz'.format(self.name)
-        url = 'https://bitbucket.org/SpartanJ/efsw/get/{}.tar.gz'.format(self.version)
-        self.output.info('Downloading efsw {} from {} ...'.format(self.version, url))
-        download(url, downloaded_tar)
-
-        self.output.info('Extracting {} ...'.format(downloaded_tar))
-        untargz(downloaded_tar)
-        globstring = os.path.join(self.conanfile_directory, 'SpartanJ-efsw-*')
-        self.output.info(' - src: {}'.format(os.path.join(os.getcwd(), downloaded_tar)))
-        globlist = glob.glob(os.path.join(os.getcwd(), 'SpartanJ-efsw*'))
-
-        if len(globlist) == 1:
-            self.output.info(' - dst: {}'.format(globlist[0]))
-            os.rename(globlist[0], self.sourcedir)
-        else:
-            raise RuntimeError('No extracted efsw folder (\'SpartanJ-efsw-<commit hash>\') found!')
+        git = tools.Git(folder=self.source_folder)
+        git.clone("https://github.com/SpartanJ/efsw.git")
+        git.checkout(self.version)
 
     def build(self):
-        cmake = CMake(self.settings)
-        self.output.info('Configure and build...'.format(self.options.shared))
-        options  = ' -DSTATIC_LIB=' + ('OFF' if self.options.shared else 'ON')
-        options += ' -DCMAKE_POSITION_INDEPENDENT_CODE=' + ('ON' if self.options.fPIC else 'OFF')
-        options += ' -DCMAKE_VERBOSE_MAKEFILE=ON'
-        self.output.info(' - cmake options: {}'.format(options))
-        self.run('cmake {} {} {}'.format(self.sourcedir, cmake.command_line, options))
-        self.run('cmake --build . {}'.format(cmake.build_config))
+        cmake = CMake(self)
+        cmake.verbose = True
+        cmake.definitions["STATIC_LIB"] = not self.options.shared
+        cmake.definitions["CMAKE_POSITION_INDEPENDENT_CODE"] = self.options.fPIC
+        cmake.configure()
+        cmake.build()
+        cmake.install()
 
     def package(self):
         includedir = os.path.join('include', 'efsw')
@@ -62,7 +48,10 @@ class Efsw(ConanFile):
         self.copy('*.dll', dst='lib')
 
     def package_info(self):
-        self.cpp_info.libs = ['efsw']
+        self.cpp_info.includedirs = ['include']
+        self.cpp_info.libs = tools.collect_libs(self)
 
-        if self.settings.os == 'Linux':
+        if self.settings.os == "Macos":
+            self.cpp_info.frameworks.extend( ["CoreFoundation", "CoreServices"] )
+        elif self.settings.os == 'Linux':
             self.cpp_info.libs.append('pthread')
