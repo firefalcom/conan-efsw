@@ -1,15 +1,18 @@
-from conans import ConanFile, CMake
+from conans import ConanFile, CMake, tools
 import os
 
 class TestEfsw(ConanFile):
     settings = 'os', 'compiler', 'build_type', 'arch'
-    requires = 'cmake-utils/0.0.0@Manu343726/testing', 'efsw/1.0.0@Manu343726/testing'
     generators = 'cmake'
 
+
     def build(self):
-        cmake = CMake(self.settings)
-        self.run('cmake {} {}'.format(self.conanfile_directory, cmake.command_line))
-        self.run('cmake --build . {}'.format(cmake.build_config))
+        cmake = CMake(self)
+        cmake.configure()
+        cmake.build()
 
     def test(self):
-        self.run(os.path.join('.', 'bin', 'example'))
+        if not tools.cross_building(self.settings):
+            os.chdir("bin")
+            self.run(".%stest_package" % os.sep)
+
